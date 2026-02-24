@@ -1,0 +1,57 @@
+% --- DIAGRAMAS DE BODE Y NYQUIST ACTUALIZADOS ---
+% Sistema de segundo orden: G(s) = 1 / (s^2 + 2*xi*wn*s + wn^2)
+
+clc; clear; close all;
+
+% 1. Definimos los valores de los rangos
+% Escogemos los extremos y el punto crítico (xi=1) para ver la diferencia
+wn_valores = [0.1, 3];       % Frecuencias: Baja y Alta
+xi_valores = [0.1, 1, 2];    % Amortiguamientos: Sub, Crítico y Sobre
+
+% Preparamos la figura
+figure('Name', 'Analisis en Frecuencia: Bode y Nyquist', 'Position', [100, 100, 1200, 500]);
+
+% Colores y estilos de línea para diferenciar (6 curvas en total)
+estilos = {'b-', 'b--', 'b:', 'r-', 'r--', 'r:'}; 
+contador = 1;
+leyendas = cell(1, 6);
+
+% Bucle para dibujar las combinaciones
+for i = 1:length(wn_valores)
+    for j = 1:length(xi_valores)
+        
+        wn = wn_valores(i);
+        xi = xi_valores(j);
+        
+        % 2. Función de Transferencia G(s)
+        sistema = tf(1, [1, 2*xi*wn, wn^2]);
+        
+        % Texto de la leyenda
+        leyendas{contador} = sprintf('\\omega_n = %.1f, \\xi = %.1f', wn, xi);
+        
+        % --- Dibujar Diagrama de BODE ---
+        subplot(1, 2, 1);
+        hold on;
+        bode(sistema, estilos{contador});
+        
+        % --- Dibujar Diagrama de NYQUIST ---
+        subplot(1, 2, 2);
+        hold on;
+        nyquist(sistema, estilos{contador});
+        
+        contador = contador + 1;
+    end
+end
+
+% 3. Formato final para que se vea claro
+% Formato Bode
+subplot(1, 2, 1);
+grid on;
+title('Diagrama de Bode', 'FontSize', 12, 'FontWeight', 'bold');
+legend(leyendas, 'Location', 'southwest', 'FontSize', 9);
+
+% Formato Nyquist
+subplot(1, 2, 2);
+grid on;
+title('Diagrama de Nyquist', 'FontSize', 12, 'FontWeight', 'bold');
+legend(leyendas, 'Location', 'best', 'FontSize', 9);
