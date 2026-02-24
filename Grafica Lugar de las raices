@@ -1,0 +1,85 @@
+% --- POSICIÓN DE LAS RAÍCES (VERSIÓN FINAL CORREGIDA) ---
+% Rango: xi = [0.1, 2], wn = [0.1, 3]
+% Mejoras: Arcos suaves (más resolución) y etiquetas completas con wn.
+
+clc; clear; close all;
+
+% Preparamos la figura
+figure('Name', 'Lugar de las Raíces Final', 'Position', [100, 100, 950, 600]);
+hold on; grid on;
+
+% 1. DIBUJAR EL MAPA BASE
+wn_fijos = [0.1, 1, 2, 3];
+% AUMENTAMOS LA RESOLUCIÓN: 5000 puntos para que el arco sea perfecto
+xi_barrido = linspace(0.1, 2, 5000);
+
+for i = 1:length(wn_fijos)
+    wn = wn_fijos(i);
+    % Calculamos las raíces con alta resolución
+    r1 = -xi_barrido*wn + wn*sqrt(xi_barrido.^2 - 1 + 0i);
+    r2 = -xi_barrido*wn - wn*sqrt(xi_barrido.^2 - 1 + 0i);
+    
+    % Dibujamos las curvas azules (wn constante)
+    plot(real(r1), imag(r1), 'Color', [0.6 0.8 1], 'LineWidth', 1.5, 'HandleVisibility', 'off');
+    plot(real(r2), imag(r2), 'Color', [0.6 0.8 1], 'LineWidth', 1.5, 'HandleVisibility', 'off');
+end
+
+% 2. IDENTIFICAR LOS CASOS CON PUNTOS Y TEXTOS COMPLETOS
+% Usamos wn = 3 para el ejemplo
+wn_ej = 3;
+
+% --- CASO 1: SUBAMORTIGUADO (0 < xi < 1) ---
+xi_sub = 0.5; 
+r1_sub = -xi_sub*wn_ej + wn_ej*sqrt(xi_sub^2 - 1 + 0i);
+r2_sub = -xi_sub*wn_ej - wn_ej*sqrt(xi_sub^2 - 1 + 0i);
+
+p_sub = plot(real([r1_sub, r2_sub]), imag([r1_sub, r2_sub]), 'go', 'MarkerSize', 9, 'MarkerFaceColor', 'g');
+% Texto actualizado con wn
+text(real(r1_sub)+0.3, imag(r1_sub), ['Subamortiguado (\xi=0.5, \omega_n=' num2str(wn_ej) ')'], 'Color', [0 0.5 0], 'FontWeight', 'bold', 'FontSize', 9);
+text(real(r2_sub)+0.3, imag(r2_sub), ['Subamortiguado (\xi=0.5, \omega_n=' num2str(wn_ej) ')'], 'Color', [0 0.5 0], 'FontWeight', 'bold', 'FontSize', 9);
+
+% --- CASO 2: CRÍTICAMENTE AMORTIGUADO (xi = 1) ---
+xi_crit = 1;
+r_crit = -xi_crit*wn_ej + wn_ej*sqrt(xi_crit^2 - 1 + 0i);
+
+p_crit = plot(real(r_crit), imag(r_crit), 'ko', 'MarkerSize', 10, 'MarkerFaceColor', 'k');
+% Texto actualizado con wn
+text(real(r_crit)-0.5, imag(r_crit)+0.4, ['Crítico (\xi=1, \omega_n=' num2str(wn_ej) ')'], 'Color', 'k', 'FontWeight', 'bold', 'FontSize', 9);
+
+% --- CASO 3: SOBREAMORTIGUADO (xi > 1) ---
+xi_sob = 2;
+r1_sob = -xi_sob*wn_ej + wn_ej*sqrt(xi_sob^2 - 1 + 0i);
+r2_sob = -xi_sob*wn_ej - wn_ej*sqrt(xi_sob^2 - 1 + 0i);
+
+p_sob = plot(real([r1_sob, r2_sob]), imag([r1_sob, r2_sob]), 'mo', 'MarkerSize', 9, 'MarkerFaceColor', 'm');
+% Texto actualizado con wn. Ajustamos la posición para que no se solape.
+text(real(r1_sob)+0.2, imag(r1_sob)+0.5, ['Sobreamortiguado (\xi=2, \omega_n=' num2str(wn_ej) ')'], 'Color', 'm', 'FontWeight', 'bold', 'FontSize', 9);
+text(real(r2_sob)+0.2, imag(r2_sob)+0.5, ['Sobreamortiguado (\xi=2, \omega_n=' num2str(wn_ej) ')'], 'Color', 'm', 'FontWeight', 'bold', 'FontSize', 9);
+
+
+% 3. FORMATO FINAL
+% Líneas centrales negras para los ejes
+yline(0, 'k', 'LineWidth', 1.2, 'HandleVisibility', 'off');
+xline(0, 'k', 'LineWidth', 1.2, 'HandleVisibility', 'off');
+
+% Títulos y Ejes
+title('Mapa de Raíces: Identificación de Casos de Amortiguamiento', 'FontSize', 13, 'FontWeight', 'bold');
+
+% --- AQUÍ ESTÁ LA CORRECCIÓN DEL TEXTO LITERAL ---
+xlabel('Eje Real: $-\xi\omega_n$', 'Interpreter', 'latex', 'FontSize', 14, 'FontWeight', 'bold');
+ylabel('Eje Imaginario: $j\omega_n\sqrt{1-\xi^2}$', 'Interpreter', 'latex', 'FontSize', 14, 'FontWeight', 'bold');
+
+% Leyenda
+legend([p_sub, p_crit, p_sob], ...
+    {'Subamortiguado (Raíces Complejas)', ...
+     'Críticamente Amortiguado (Raíz Doble Real)', ...
+     'Sobreamortiguado (Raíces Reales Distintas)'}, ...
+    'Location', 'southwest', 'FontSize', 10);
+
+% Ajustar la vista y asegurar proporción real para que se vean círculos, no elipses
+xlim([-13 4]);
+ylim([-4 4]);
+axis equal; 
+
+% Ajustar la posición de los ejes dentro de la figura para la leyenda
+set(gca, 'Position', [0.1, 0.15, 0.85, 0.75]);
