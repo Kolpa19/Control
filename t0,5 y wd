@@ -1,0 +1,74 @@
+% --- GRÁFICAS DE t_1/2 y w_d EN FUNCIÓN DE xi y wn ---
+% Intervalos: xi = [0.1, 2], wn = [0.1, 3]
+
+clc; clear; close all;
+
+% Preparamos la figura doble
+figure('Name', 'Parámetros Temporales y de Frecuencia', 'Position', [100, 100, 1000, 500]);
+
+% Valores de los parámetros
+wn_fijos = [0.1, 1, 2, 3];
+xi_barrido = linspace(0.1, 2, 1000); % Barrido horizontal continuo
+colores = {'b', 'r', 'g', 'm'};      % Colores para distinguir cada wn
+
+% =========================================================================
+% 1. GRÁFICA DEL TIEMPO DE VIDA MEDIA (t_1/2)
+% =========================================================================
+subplot(1, 2, 1);
+hold on; grid on;
+
+for i = 1:length(wn_fijos)
+    wn = wn_fijos(i);
+    % Fórmula matemática del tiempo de vida media
+    t_half = log(2) ./ (xi_barrido * wn);
+    
+    % Dibujamos la curva
+    plot(xi_barrido, t_half, 'Color', colores{i}, 'LineWidth', 2, ...
+         'DisplayName', ['$\omega_n = ' num2str(wn) '$']);
+end
+
+% Formato LaTeX para el primer gráfico
+title('\textbf{Tiempo de vida media ($t_{1/2}$)}', 'Interpreter', 'latex', 'FontSize', 14);
+xlabel('Amortiguamiento ($\xi$)', 'Interpreter', 'latex', 'FontSize', 12, 'FontWeight', 'bold');
+ylabel('$t_{1/2} = \frac{\ln(2)}{\xi\omega_n}$ \quad (segundos)', 'Interpreter', 'latex', 'FontSize', 12, 'FontWeight', 'bold');
+legend('Interpreter', 'latex', 'Location', 'northeast', 'FontSize', 11);
+
+% Limitar el eje Y porque para wn=0.1 el tiempo se dispara y aplasta las demás curvas
+ylim([0, 15]); 
+xlim([0.1, 2]);
+
+
+% =========================================================================
+% 2. GRÁFICA DE LA FRECUENCIA AMORTIGUADA (w_d)
+% =========================================================================
+subplot(1, 2, 2);
+hold on; grid on;
+
+for i = 1:length(wn_fijos)
+    wn = wn_fijos(i);
+    
+    % wd solo existe físicamente como rebote cuando xi <= 1 (Subamortiguado)
+    % Para xi > 1, el sistema no oscila, así que wd = 0.
+    wd = zeros(size(xi_barrido)); % Preparamos un vector de ceros
+    
+    % Filtramos solo la zona donde xi <= 1 para aplicar la fórmula
+    zona_sub = (xi_barrido <= 1); 
+    wd(zona_sub) = wn * sqrt(1 - xi_barrido(zona_sub).^2);
+    
+    % Dibujamos la curva
+    plot(xi_barrido, wd, 'Color', colores{i}, 'LineWidth', 2, ...
+         'DisplayName', ['$\omega_n = ' num2str(wn) '$']);
+end
+
+% Formato LaTeX para el segundo gráfico
+title('\textbf{Frecuencia amortiguada ($\omega_d$)}', 'Interpreter', 'latex', 'FontSize', 14);
+xlabel('Amortiguamiento ($\xi$)', 'Interpreter', 'latex', 'FontSize', 12, 'FontWeight', 'bold');
+ylabel('$\omega_d = \omega_n\sqrt{1-\xi^2}$ \quad (rad/s)', 'Interpreter', 'latex', 'FontSize', 12, 'FontWeight', 'bold');
+legend('Interpreter', 'latex', 'Location', 'northeast', 'FontSize', 11);
+
+% Ajustar ejes
+ylim([0, 3.5]);
+xlim([0.1, 2]);
+
+% Retoque estético de la ventana general
+set(gcf, 'Color', 'w');
