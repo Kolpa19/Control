@@ -1,75 +1,92 @@
-% --- DIAGRAMAS DE BODE Y NYQUIST (VERSIÓN SIN TOOLBOX) ---
-% Cálculo matemático manual para cualquier versión de MATLAB
+% --- DIAGRAMAS DE BODE: EFECTOS AISLADOS DE xi Y wn ---
+% Sin Toolboxes, utilizando matemáticas de números complejos puras.
 
 clc; clear; close all;
 
-% 1. Valores de los parámetros
-wn_valores = [0.1, 3];    % Extremos de frecuencia natural
-xi_valores = [0.1, 1, 2]; % Subamortiguado, Crítico y Sobreamortiguado
+% Vector de frecuencias w (Eje horizontal): Desde 0.01 hasta 100 rad/s
+% Se usa logspace para que los puntos se repartan bien en escala logarítmica
+w = logspace(-2, 2, 1000); 
 
-% Creamos un vector de frecuencias 'w' (desde 0.01 hasta 100 rad/s)
-% Se usa logspace porque el eje horizontal de Bode va en escala logarítmica
-w = logspace(-2, 2, 2000); 
+% Preparamos la super-figura
+figure('Name', 'Diagramas de Bode', 'Position', [50, 50, 1100, 700]);
 
-% Preparamos la figura
-figure('Name', 'Analisis en Frecuencia (Manual)', 'Position', [50, 50, 1100, 600]);
+% =========================================================================
+% COLUMNA IZQUIERDA: EFECTO DEL AMORTIGUAMIENTO (\xi)
+% Fijamos el muelle (wn = 1) y barremos la fricción (xi)
+% =========================================================================
+wn_fijo = 1;
+xi_valores = [0.1, 0.5, 1, 2];
+colores_xi = {'b', 'g', 'k', 'm'};
 
-% Colores y estilos (Azul para wn=0.1, Rojo para wn=3)
-colores = {'b', 'b', 'b', 'r', 'r', 'r'};
-estilos = {'-', '--', ':', '-', '--', ':'};
-leyendas = cell(1, 6);
-contador = 1;
-
-for i = 1:length(wn_valores)
-    for j = 1:length(xi_valores)
-        wn = wn_valores(i);
-        xi = xi_valores(j);
-        leyendas{contador} = sprintf('\\omega_n = %.1f,  \\xi = %.1f', wn, xi);
-        
-        % 2. LA FÓRMULA MÁGICA (G evaluada en j*w)
-        % Denominador: (wn^2 - w^2) + parte imaginaria (2*xi*wn*w)
-        G = 1 ./ ((wn^2 - w.^2) + 1i * (2 * xi * wn * w));
-        
-        % --- BODE: MAGNITUD (Arriba izquierda) ---
-        subplot(2, 2, 1); hold on;
-        % La magnitud en dB es 20*log10(módulo)
-        mag_dB = 20 * log10(abs(G));
-        semilogx(w, mag_dB, [colores{contador} estilos{contador}], 'LineWidth', 2);
-        
-        % --- BODE: FASE (Abajo izquierda) ---
-        subplot(2, 2, 3); hold on;
-        % La fase en grados. angle(G) da radianes, así que multiplicamos por 180/pi
-        fase_deg = angle(G) * 180 / pi;
-        % Pequeño ajuste para que no haya saltos raros y empiece en 0º
-        fase_deg(fase_deg > 0) = fase_deg(fase_deg > 0) - 360; 
-        semilogx(w, fase_deg, [colores{contador} estilos{contador}], 'LineWidth', 2);
-        
-        % --- NYQUIST (Lado derecho entero) ---
-        subplot(2, 2, [2, 4]); hold on;
-        % Nyquist es graficar la parte Real vs la parte Imaginaria
-        plot(real(G), imag(G), [colores{contador} estilos{contador}], 'LineWidth', 2);
-        % Añadimos el reflejo (frecuencias negativas) más finito para ser rigurosos
-        plot(real(G), -imag(G), [colores{contador} estilos{contador}], 'LineWidth', 0.5, 'HandleVisibility', 'off');
-        
-        contador = contador + 1;
-    end
+% 1. Magnitud (Arriba Izquierda)
+subplot(2, 2, 1); hold on; grid on;
+for i = 1:length(xi_valores)
+    xi = xi_valores(i);
+    % Ecuación matemática exacta en frecuencia imaginaria (s = jw)
+    G = 1 ./ ((wn_fijo^2 - w.^2) + 1i * (2 * xi * wn_fijo * w));
+    mag_dB = 20 * log10(abs(G)); % Convertir a Decibelios
+    
+    plot(w, mag_dB, 'Color', colores_xi{i}, 'LineWidth', 2, ...
+         'DisplayName', ['$\xi = ' num2str(xi) '$']);
 end
+set(gca, 'XScale', 'log'); % Eje X en escala logarítmica
+title('\textbf{Efecto de $\xi$ (Fijando $\omega_n = 1$)}', 'Interpreter', 'latex', 'FontSize', 14);
+ylabel('\textbf{Magnitud} $\quad 20\log_{10}|G|$ \textbf{(dB)}', 'Interpreter', 'latex', 'FontSize', 12);
+legend('Interpreter', 'latex', 'Location', 'southwest', 'FontSize', 11);
+ylim([-60 25]); % Ajuste manual para que se vea el pico bien
 
-% 3. PONERLO BONITO
-% Formato Bode Magnitud
-subplot(2, 2, 1); grid on;
-title('Diagrama de Bode: Magnitud', 'FontSize', 11, 'FontWeight', 'bold');
-ylabel('Magnitud (dB)');
-legend(leyendas, 'Location', 'southwest', 'FontSize', 8);
+% 2. Fase (Abajo Izquierda)
+subplot(2, 2, 3); hold on; grid on;
+for i = 1:length(xi_valores)
+    xi = xi_valores(i);
+    G = 1 ./ ((wn_fijo^2 - w.^2) + 1i * (2 * xi * wn_fijo * w));
+    fase_deg = angle(G) * 180 / pi; % Convertir radianes a grados
+    
+    plot(w, fase_deg, 'Color', colores_xi{i}, 'LineWidth', 2);
+end
+set(gca, 'XScale', 'log');
+xlabel('\textbf{Frecuencia} $\omega$ \textbf{(rad/s)}', 'Interpreter', 'latex', 'FontSize', 12);
+ylabel('\textbf{Fase} $\phi$ \textbf{(grados)}', 'Interpreter', 'latex', 'FontSize', 12);
+yticks([-180 -135 -90 -45 0]); % Marcas clásicas de desfase
+ylim([-190 10]);
 
-% Formato Bode Fase
-subplot(2, 2, 3); grid on;
-title('Diagrama de Bode: Fase', 'FontSize', 11, 'FontWeight', 'bold');
-xlabel('Frecuencia \omega (rad/s)'); ylabel('Fase (grados)');
 
-% Formato Nyquist
-subplot(2, 2, [2, 4]); grid on;
-title('Diagrama de Nyquist', 'FontSize', 11, 'FontWeight', 'bold');
-xlabel('Eje Real'); ylabel('Eje Imaginario');
-plot(0, 0, 'k+', 'MarkerSize', 10, 'HandleVisibility', 'off'); % Marcar el centro (0,0)
-axis auto; % Que MATLAB ajuste el zoom solo
+% =========================================================================
+% COLUMNA DERECHA: EFECTO DE LA FRECUENCIA NATURAL (\omega_n)
+% Fijamos la fricción (xi = 0.5) y barremos el muelle (wn)
+% =========================================================================
+xi_fijo = 0.5;
+wn_valores = [0.1, 1, 3];
+colores_wn = {'b', 'r', 'm'};
+
+% 3. Magnitud (Arriba Derecha)
+subplot(2, 2, 2); hold on; grid on;
+for i = 1:length(wn_valores)
+    wn = wn_valores(i);
+    G = 1 ./ ((wn^2 - w.^2) + 1i * (2 * xi_fijo * wn * w));
+    mag_dB = 20 * log10(abs(G));
+    
+    plot(w, mag_dB, 'Color', colores_wn{i}, 'LineWidth', 2, ...
+         'DisplayName', ['$\omega_n = ' num2str(wn) '$']);
+end
+set(gca, 'XScale', 'log');
+title('\textbf{Efecto de $\omega_n$ (Fijando $\xi = 0.5$)}', 'Interpreter', 'latex', 'FontSize', 14);
+legend('Interpreter', 'latex', 'Location', 'southwest', 'FontSize', 11);
+ylim([-60 45]);
+
+% 4. Fase (Abajo Derecha)
+subplot(2, 2, 4); hold on; grid on;
+for i = 1:length(wn_valores)
+    wn = wn_valores(i);
+    G = 1 ./ ((wn^2 - w.^2) + 1i * (2 * xi_fijo * wn * w));
+    fase_deg = angle(G) * 180 / pi;
+    
+    plot(w, fase_deg, 'Color', colores_wn{i}, 'LineWidth', 2);
+end
+set(gca, 'XScale', 'log');
+xlabel('\textbf{Frecuencia} $\omega$ \textbf{(rad/s)}', 'Interpreter', 'latex', 'FontSize', 12);
+yticks([-180 -135 -90 -45 0]);
+ylim([-190 10]);
+
+% Retoque de fondo blanco para toda la figura
+set(gcf, 'Color', 'w');
