@@ -1,0 +1,39 @@
+% =========================================================================
+% PRIMERA PARTE: BUCLE ABIERTO (UAV) - GRÁFICAS DETALLADAS
+% =========================================================================
+clear; clc; close all;
+
+load('avion2026.mat'); 
+
+% Definimos el sistema (observando los 4 estados)
+sys_abierto = ss(A, B, eye(4), zeros(4,2));
+
+% Perturbación inicial en theta (el 3er estado) de 0.1 rad
+x0 = [0; 0; 0.1; 0]; 
+t = 0:0.1:600; % Tiempo largo para ver el modo Fugoide
+
+% Simulamos la respuesta inicial
+[y, t_out] = initial(sys_abierto, x0, t);
+
+% Creamos las gráficas con etiquetas claras
+figure('Name', 'Análisis de Estados en Bucle Abierto', 'Color', 'w');
+
+% 1. Velocidad (V)
+subplot(4,1,1);
+plot(t_out, y(:,1), 'LineWidth', 1.5);
+ylabel('V (m/s)'); title('Respuesta Temporal: Estados del UAV'); grid on;
+
+% 2. Ángulo de Ataque (alpha)
+subplot(4,1,2);
+plot(t_out, y(:,2), 'r', 'LineWidth', 1.5);
+ylabel('\alpha (rad)'); grid on;
+
+% 3. Ángulo de Asiento (theta)
+subplot(4,1,3);
+plot(t_out, y(:,3), 'g', 'LineWidth', 1.5);
+ylabel('\theta (rad)'); grid on;
+
+% 4. Velocidad de Cabeceo (q)
+subplot(4,1,4);
+plot(t_out, y(:,4), 'm', 'LineWidth', 1.5);
+ylabel('q (rad/s)'); xlabel('Tiempo (segundos)'); grid on;
