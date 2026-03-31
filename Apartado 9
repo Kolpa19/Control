@@ -1,0 +1,79 @@
+% =========================================================================
+% SIMULACIÓN LIMPIA: ÁREA DE ERROR Y DESVIACIÓN MÁXIMA
+% =========================================================================
+clear; clc; close all;
+
+% 1. PARÁMETROS DEL SISTEMA
+xi = 0.5;      
+wn = 2.0;      
+Kp = 10;       
+Kd = 2;        
+
+% 2. FUNCIÓN DE TRANSFERENCIA EN LAZO CERRADO
+s = tf('s');
+num = Kp; 
+den = s^2 + (2*xi*wn + Kd)*s + (wn^2 + Kp);
+G_lc = num / den;
+
+% 3. CREACIÓN DE LA SEÑAL TRAPEZOIDAL (CONSIGNA xc)
+dt = 0.01;              
+t = 0:dt:15;            
+xc = zeros(size(t));    
+
+t_s = 3;                % Fin rampa de subida
+t_est = 7;              % Fin tramo plano
+t_d = 10;               % Fin rampa de bajada
+
+for i = 1:length(t)
+    if t(i) <= t_s
+        xc(i) = (1/t_s) * t(i);
+    elseif t(i) > t_s && t(i) <= t_est
+        xc(i) = 1;
+    elseif t(i) > t_est && t(i) <= t_d
+        xc(i) = 1 - (1/(t_d - t_est)) * (t(i) - t_est);
+    else
+        xc(i) = 0;
+    end
+end
+
+% 4. SIMULACIÓN DEL SISTEMA
+[x_out, t_out] = lsim(G_lc, xc, t);
+error = xc' - x_out; 
+
+% --- CÁLCULO DE LA MÁXIMA DESVIACIÓN ---
+[max_err_val, idx_max] = max(abs(error));
+t_max_err = t_out(idx_max);
+x_max_val = x_out(idx_max);
+xc_max_val = xc(idx_max);
+
+% 5. REPRESENTACIÓN GRÁFICA LIMPIA
+figure('Name', 'Respuesta y Error', 'NumberTitle', 'off', 'Color', 'w');
+hold on;
+
+% Área de Error
+t_fill = [t, fliplr(t)]; 
+error_fill = [xc, fliplr(x_out')];
+fill(t_fill, error_fill, [1 0.8 0.8], 'EdgeColor', 'none', 'FaceAlpha', 0.5, 'DisplayName', 'Error acumulado (Área)'); 
+
+% Curvas Principales
+plot(t, xc, 'k--', 'LineWidth', 2, 'DisplayName', 'Consigna Ideal (x_c)');
+plot(t_out, x_out, 'b', 'LineWidth', 2, 'DisplayName', 'Respuesta del Sistema (x)');
+
+% Dibujar Máxima Desviación (Líneas y puntos más finos)
+plot([t_max_err t_max_err], [x_max_val xc_max_val], 'r-', 'LineWidth', 1.2, 'HandleVisibility', 'off');
+plot(t_max_err, x_max_val, 'ro', 'MarkerSize', 5, 'MarkerFaceColor', 'r', 'DisplayName', 'Máxima Desviación');
+text(t_max_err - 0.2, x_max_val + 0.1, 'Máx Error', 'Color', 'red', 'FontWeight', 'bold', 'HorizontalAlignment', 'right', 'FontSize', 9);
+
+% Detalles estéticos
+title('Seguimiento de Trayectoria Trapezoidal (Control PD)');
+xlabel('Tiempo (s)');
+ylabel('Amplitud');
+grid on;
+
+% Líneas divisorias de las fases del trapecio
+xline(t_s, 'k:', 'HandleVisibility', 'off'); 
+xline(t_est, 'k:', 'HandleVisibility', 'off'); 
+xline(t_d, 'k:', 'HandleVisibility', 'off');
+
+% Forzar leyenda
+legend('Location', 'southeast');
