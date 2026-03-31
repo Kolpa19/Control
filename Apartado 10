@@ -1,0 +1,93 @@
+% =========================================================================
+% SIMULACIÓN: RESPUESTA CON DOS COLORES (ZONAS ACCESIBLES VS INACCESIBLES)
+% =========================================================================
+clear; clc; close all;
+
+% 1. PARÁMETROS DEL SISTEMA
+xi = 0.5;      
+wn = 2.0;      
+Kp = 10;       
+Kd = 2;        
+
+% 2. FUNCIÓN DE TRANSFERENCIA EN LAZO CERRADO
+s = tf('s');
+num = Kp; 
+den = s^2 + (2*xi*wn + Kd)*s + (wn^2 + Kp);
+G_lc = num / den;
+
+% 3. CREACIÓN DE LA SEÑAL TRAPEZOIDAL (CONSIGNA xc)
+dt = 0.01;              
+t = 0:dt:15;            
+xc = zeros(size(t));    
+
+t_s = 3;                
+t_est = 7;              
+t_d = 10;               
+
+for i = 1:length(t)
+    if t(i) <= t_s
+        xc(i) = (1/t_s) * t(i);
+    elseif t(i) > t_s && t(i) <= t_est
+        xc(i) = 1;
+    elseif t(i) > t_est && t(i) <= t_d
+        xc(i) = 1 - (1/(t_d - t_est)) * (t(i) - t_est);
+    else
+        xc(i) = 0;
+    end
+end
+
+% 4. SIMULACIÓN DEL SISTEMA
+[x_out, t_out] = lsim(G_lc, xc, t);
+error = xc' - x_out; 
+
+% --- CÁLCULO DE LA MÁXIMA DESVIACIÓN ---
+[max_err_val, idx_max] = max(abs(error));
+t_max_err = t_out(idx_max);
+x_max_val = x_out(idx_max);
+xc_max_val = xc(idx_max);
+
+% 5. REPRESENTACIÓN GRÁFICA CON LÍNEA EN DOS COLORES
+figure('Name', 'Zonas Accesibles e Inaccesibles', 'NumberTitle', 'off', 'Color', 'w');
+hold on;
+
+% Área de Error (Sombreado rojo tenue)
+t_fill = [t, fliplr(t)]; 
+error_fill = [xc, fliplr(x_out')];
+fill(t_fill, error_fill, [1 0 0], 'EdgeColor', 'none', 'FaceAlpha', 0.1, 'DisplayName', 'Error acumulado (Área)'); 
+
+% Consigna Ideal
+plot(t, xc, 'k--', 'LineWidth', 2, 'DisplayName', 'Consigna Ideal (x_c)');
+
+% --- DIBUJAR LA RESPUESTA EN DOS COLORES SEGÚN LA ZONA ---
+% Índices de las zonas (solapando los bordes para que la línea no tenga huecos)
+idx_inacc1 = (t_out <= t_s);
+idx_acc1   = (t_out >= t_s) & (t_out <= t_est);
+idx_inacc2 = (t_out >= t_est) & (t_out <= t_d);
+idx_acc2   = (t_out >= t_d);
+
+% Dibujar Zonas Inaccesibles (Rampas) en Rojo
+plot(t_out(idx_inacc1), x_out(idx_inacc1), 'r', 'LineWidth', 2, 'DisplayName', 'Respuesta (Inaccesible)');
+plot(t_out(idx_inacc2), x_out(idx_inacc2), 'r', 'LineWidth', 2, 'HandleVisibility', 'off');
+
+% Dibujar Zonas Accesibles (Tramos planos) en Azul
+plot(t_out(idx_acc1), x_out(idx_acc1), 'b', 'LineWidth', 2, 'DisplayName', 'Respuesta (Accesible)');
+plot(t_out(idx_acc2), x_out(idx_acc2), 'b', 'LineWidth', 2, 'HandleVisibility', 'off');
+
+% Dibujar Máxima Desviación (Pequeña y fina)
+plot([t_max_err t_max_err], [x_max_val xc_max_val], 'r-', 'LineWidth', 1.2, 'HandleVisibility', 'off');
+plot(t_max_err, x_max_val, 'ro', 'MarkerSize', 5, 'MarkerFaceColor', 'r', 'DisplayName', 'Máxima Desviación');
+text(t_max_err - 0.2, x_max_val + 0.1, 'Máx Error', 'Color', 'red', 'FontWeight', 'bold', 'HorizontalAlignment', 'right', 'FontSize', 9);
+
+% Detalles estéticos
+title('Análisis de Zonas Accesibles e Inaccesibles (Control PD)');
+xlabel('Tiempo (s)');
+ylabel('Amplitud');
+grid on;
+
+% Líneas divisorias de las fases del trapecio
+xline(t_s, 'k:', 'HandleVisibility', 'off'); 
+xline(t_est, 'k:', 'HandleVisibility', 'off'); 
+xline(t_d, 'k:', 'HandleVisibility', 'off');
+
+% Forzar leyenda completa
+legend('Location', 'southeast', 'FontSize', 9);
