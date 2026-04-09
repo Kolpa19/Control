@@ -1,0 +1,66 @@
+% =========================================================================
+% SEGUNDA PARTE 2.1: REGULADOR POR POLE PLACEMENT
+% =========================================================================
+clear; clc; close all;
+
+load('avion2026.mat'); 
+
+% 1. CONDICIONES INICIALES SIMULTÁNEAS
+% Perturbación: V = -1 m/s, theta = 0.1 rad
+x0 = [-1; 0; 0.1; 0]; 
+
+% 2. DISEÑO DEL CONTROLADOR (POLE PLACEMENT)
+% =====================================================================
+% ¡AQUÍ ES DONDE TIENES QUE CAMBIAR LOS POLOS!
+polos_deseados = [-1.5, -1.6, -3.24+6.46i, -3.24-6.46i]; 
+% =====================================================================
+
+% Calculamos la matriz de ganancias K
+K = place(A, B, polos_deseados);
+
+% 3. SISTEMA EN LAZO CERRADO
+A_cl = A - B*K;
+sys_cl = ss(A_cl, B, eye(4), zeros(4,2));
+
+% 4. SIMULACIÓN (5 segundos)
+t = 0:0.01:5;
+[x_out, t_out] = initial(sys_cl, x0, t);
+
+% 5. CÁLCULO DEL ESFUERZO FÍSICO (VALOR ABSOLUTO)
+% Fórmula: Valor Absoluto = Valor Relativo (-K*x) + Trimado (Utrim)
+u_control = (-K * x_out')'; 
+u_total = u_control + Utrim'; 
+
+% =========================================================================
+% GRÁFICAS
+% =========================================================================
+
+% --- FIGURA 1: ESTADOS DEL AVIÓN ---
+figure('Name', 'Pole Placement: Estados', 'Color', 'w');
+nombres_x = {'V (m/s)', '\alpha (rad)', '\theta (rad)', 'q (rad/s)'};
+for i = 1:4
+    subplot(2, 2, i);
+    plot(t_out, x_out(:,i), 'b', 'LineWidth', 2);
+    yline(0, 'k--'); 
+    title(['Estado: ', nombres_x{i}]);
+    xlabel('Tiempo (s)'); grid on;
+end
+
+% --- FIGURA 2: ACTUADORES FÍSICOS (Con límites reales) ---
+figure('Name', 'Pole Placement: Actuadores', 'Color', 'w');
+
+% Acelerador (Límites físicos reales: 0 a 1)
+subplot(2,1,1);
+plot(t_out, u_total(:,1), 'r', 'LineWidth', 2); hold on;
+yline(1, 'k--', 'Límite Máx (1.0)', 'LabelHorizontalAlignment', 'left');
+yline(0, 'k--', 'Límite Mín (0.0)', 'LabelHorizontalAlignment', 'left');
+title('Acelerador (u_1) [Valor Absoluto]'); xlabel('Tiempo (s)');
+ylim([-0.2, 1.6]); grid on;
+
+% Timón (Límites físicos reales: -0.5 a 0.5)
+subplot(2,1,2);
+plot(t_out, u_total(:,2), 'm', 'LineWidth', 2); hold on;
+yline(0.5, 'k--', 'Límite Máx (0.5)', 'LabelHorizontalAlignment', 'left');
+yline(-0.5, 'k--', 'Límite Mín (-0.5)', 'LabelHorizontalAlignment', 'left');
+title('Timón (u_2) [Valor Absoluto, rad]'); xlabel('Tiempo (s)');
+ylim([-0.6, 0.6]); grid on;
