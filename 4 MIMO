@@ -1,0 +1,90 @@
+% =========================================================================
+% APARTADO 4: CONTROL LQG DIGITAL CON RUIDO E INCERTIDUMBRE (ROBUSTEZ)
+% =========================================================================
+clear; clc; close all;
+
+load('avion2026.mat'); 
+
+% 1. DEFINICIÓN DE LOS SENSORES (Ciegos a 'alpha')
+C_obs = [1 0 0 0;   % Sensor 1: Velocidad (V)
+         0 0 1 0;   % Sensor 2: Cabeceo (theta)
+         0 0 0 1];  % Sensor 3: Velocidad de cabeceo (q)
+D_obs = zeros(3,2);
+
+% 2. MUNDO DIGITAL (Discretizamos el avión real a Ts = 0.01s)
+Ts = 0.01;
+sys_real_disc = c2d(ss(A, B, C_obs, D_obs), Ts); 
+Ad = sys_real_disc.A; Bd = sys_real_disc.B; Cd = sys_real_disc.C;
+
+% 3. DISEÑO DEL REGULADOR LQR (Digital)
+% Usamos unos pesos estándar para mantener la estabilidad
+Q_lqr = diag([10, 1, 100, 1]); 
+R_lqr = diag([5, 1]);
+Kd = dlqr(Ad, Bd, Q_lqr, R_lqr);
+
+% 4. INCERTIDUMBRE: EL GEMELO DIGITAL ERRÓNEO (A * 1.1)
+A_obs_cont = A * 1.1; % El ordenador cree que la aerodinámica es un 10% distinta
+sys_obs_disc = c2d(ss(A_obs_cont, B, C_obs, D_obs), Ts);
+Ad_obs = sys_obs_disc.A; Bd_obs = sys_obs_disc.B;
+
+% 5. DISEÑO DEL FILTRO DE KALMAN DIGITAL (LQE)
+% Covarianzas de ruido del enunciado: V=1e-4, theta=1e-5, q=1e-5
+Ruido_Sensores_R = diag([1e-4, 1e-5, 1e-5]); 
+% Damos un pequeño margen de ruido al proceso para ayudar al filtro a corregirse
+Ruido_Proceso_Q = eye(4) * 1e-4; 
+
+% Calculamos la ganancia L del observador usando la matriz A errónea
+[Ld, ~, ~] = dlqe(Ad_obs, eye(4), Cd, Ruido_Proceso_Q, Ruido_Sensores_R);
+
+% 6. BUCLE DE SIMULACIÓN (Milisegundo a Milisegundo)
+tiempo_total = 5;
+pasos = tiempo_total / Ts;
+
+% Vectores para almacenar gráficas
+x_real = zeros(4, pasos);
+x_estimado = zeros(4, pasos);
+
+% Perturbación inicial en velocidad según el enunciado (V = -1 m/s)
+x_real(:,1) = [-1; 0; 0; 0];
+x_estimado(:,1) = [0; 0; 0; 0]; % El clon arranca totalmente ciego
+
+for k = 1:pasos-1
+    % A) El LQR del avión actúa basándose SOLO en lo que le dice el observador
+    u = -Kd * x_estimado(:,k);
+    
+    % B) El avión real avanza un paso (con la matriz Ad buena)
+    x_real(:, k+1) = Ad * x_real(:,k) + Bd * u;
+    
+    % C) Los sensores leen el avión y les metemos la vibración aleatoria (Ruido)
+    ruido_V = sqrt(1e-4) * randn();
+    ruido_theta = sqrt(1e-5) * randn();
+    ruido_q = sqrt(1e-5) * randn();
+    y_sensor = Cd * x_real(:,k) + [ruido_V; ruido_theta; ruido_q];
+    
+    % D) El Filtro de Kalman corrige al gemelo digital (con la matriz Ad_obs mala)
+    x_estimado(:, k+1) = Ad_obs * x_estimado(:,k) + Bd_obs * u + Ld * (y_sensor - Cd * x_estimado(:,k));
+end
+
+% Vector de tiempo
+t = 0:Ts:(tiempo_total - Ts);
+
+% =========================================================================
+% GRÁFICAS PARA EL INFORME
+% =========================================================================
+figure('Name', 'Observador de Estado con Ruido', 'Color', 'w', 'Position', [100, 100, 900, 600]);
+
+% Gráfica 1: La Adivinanza de Alpha
+subplot(2,1,1);
+plot(t, x_real(2,:), 'b', 'LineWidth', 2); hold on;
+plot(t, x_estimado(2,:), 'r--', 'LineWidth', 2);
+title('Observador estimando \alpha (A pesar del ruido y la matriz A errónea)');
+ylabel('\alpha (rad)'); grid on;
+legend('Estado Real (Inaccesible)', 'Estimación de Kalman');
+
+% Gráfica 2: El Avión Estabilizándose
+subplot(2,1,2);
+plot(t, x_real(1,:), 'k', 'LineWidth', 2); hold on;
+plot(t, x_real(3,:), 'g', 'LineWidth', 2);
+title('El Avión Real recuperándose de la perturbación Inicial (V = -1 m/s)');
+xlabel('Tiempo (s)'); ylabel('Amplitud'); grid on;
+legend('Velocidad (V)', 'Ángulo Asiento (\theta)');
